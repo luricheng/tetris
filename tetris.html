@@ -38,12 +38,12 @@
     [0x2700,0x2320,0x7200,0x1310
         //010
         //111
+    ],
+    [0x5700,0x3230,0x7500,0x3130
+            //101
+            //111
     ]
-/*
-    [
-            0xf99f
-    ]
-*/
+
     )
     var bg;
     var itemPos={x:width/2,y:height/2}//方块的左上角坐标
@@ -275,6 +275,8 @@
     }
 
     function startGame(){
+        gameOver=true
+        window.clearInterval(interVal)
         for(var i=0;i<width;++i){
             bg[0][i].innerText=""
         }
