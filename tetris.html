@@ -8,41 +8,51 @@
 <style>
     .moving {margin: 1px;width: 29px;height: 29px;background: red;color: chartreuse; position: absolute;}
     .resting {margin: 1px;width: 29px;height: 29px;background: aquamarine;color: aquamarine;position: absolute}
-    .backGround {margin: 1px;width:30px;height:30px;color: black;background: black;position: absolute}
+    .backGround {margin: 1px;width:30px;height:30px;color: white;background: black;font: 25px/25px "Droid Sans Mono";position: absolute}
 </style>
 
 <body>
 
 <script>
     var width=20,height=26
-
-    var items=new Array(5)
-    items[0]= [0x1111,0xf00
-        // 1111
-    ]
-    items[1]=[0x7400,0x3110,0x1700,0x2230
+    var maxIntervalTime=500
+    var items=new Array(
+    [0x7400,0x3110,0x1700,0x2230
         //111
         //1
-    ]
+    ],
+    [0x1111,0xf00
+        // 1111
+    ],
 
-    items[2]=[0x3600,0x2310
+    [0x3600,0x2310
         //011
         //110
-    ]
+    ],
 
-    items[3]=[0xcc00
+    [0xcc00
         //11
         //11
-    ]
+    ],
 
-    items[4]=[0x2700,0x2320,0x7200,0x1310
+    [0x2700,0x2320,0x7200,0x1310
         //010
         //111
     ]
-
-    var bg=new Array(height+1);//背景
-    var itemPos={x:width/2,y:height/2}
-    var itemIdx1=0,itemIdx2=0;
+/*
+    [
+            0xf99f
+    ]
+*/
+    )
+    var bg;
+    var itemPos={x:width/2,y:height/2}//方块的左上角坐标
+    var itemIdx1=0,itemIdx2=0;//方块类型=items[itemIdx1][itemIdx2]
+    var interVal
+    var score
+    var gameOver
+    var board
+    var rankList=new Array();
 
     function createSquare(posX,posY) {//创建一个小方块 左上角在(posX*30px,posY*30px)
         var square=document.createElement("div")
@@ -96,7 +106,8 @@
         }
     }
 
-    function clearLine(line) {
+    function clearLine(line) {//删除line行
+        ++score
         for(var i=line;i>1;--i){
             for(var j=0;j<width;++j) {
                 bg[i][j].className=bg[i-1][j].className;
@@ -104,17 +115,27 @@
         }
     }
 
-    function checkFull(posY) {
-        for(var i=posY;i<posY+4&&i<height;++i){
+    function checkFull(posY) {//是否某行已满
+        for (var i = posY; i < posY + 4 && i < height; ++i) {
             var j
-            for(j=0;j<width;++j){
-                if(bg[i][j].className!="resting"){
+            for (j = 0; j < width; ++j) {
+                if (bg[i][j].className != "resting") {
                     break
                 }
             }
-            if(j==width){
+            if (j == width) {
                 clearLine(i)
             }
+        }
+        if (score <= 40) {
+            clearInterval(interVal)
+            if(gameOver==false) {
+                interVal = window.setInterval("down()", maxIntervalTime - score * 10)
+            }
+        }
+        var scoreText=("score:"+score*100)
+        for(var i=0;i<scoreText.length;++i){
+            bg[0][i].innerText=scoreText[i]
         }
     }
 
@@ -128,86 +149,148 @@
                 GameOver()
             }
             checkFull(itemPos.y-1)
-            getItem()
+            if(gameOver==false) {
+                getItem()
+            }
         }
         else{
             drawItem(itemPos.x,itemPos.y,items[itemIdx1][itemIdx2],"moving")
         }
     }
 
+    function rotate() {
+        var tmpIdx2=(itemIdx2+1)%items[itemIdx1].length
+        if(2==check(itemPos.x,itemPos.y,items[itemIdx1][tmpIdx2])) {
+            drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "backGround")
+            itemIdx2=tmpIdx2
+            drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "moving")
+        }
+    }
+
+    function xMove(k) {//x坐标移动k
+        if(check(itemPos.x+k,itemPos.y,items[itemIdx1][itemIdx2])==2) {
+            drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "backGround")
+            itemPos.x += k
+            drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "moving")
+        }
+    }
+
     document.onkeydown=function (event) {
         event=event==window.event?window.event:event
+        if(gameOver){
+            return
+        }
         switch (event.keyCode){
             case 38://上
-                drawItem(itemPos.x,itemPos.y,items[itemIdx1][itemIdx2],"backGround")
-                itemIdx2+=1
-                itemIdx2%=items[itemIdx1].length
-                var i
-                for(i=0;i<4&&check(itemPos.x,itemPos.y,items[itemIdx1][itemIdx2])==0&&itemPos.x>=0;++i){
-                        itemPos.x-=1;
-                }
-                if(i==4||itemPos.x<0){
-                    itemPos.x+=i
-                }
-                while (check(itemPos.x,itemPos.y,items[itemIdx1][itemIdx2])==0){
-                    itemPos.x+=1
-                }
-                drawItem(itemPos.x,itemPos.y,items[itemIdx1][itemIdx2],"moving")
+                rotate()
                 break;
             case 40://下
                 down()
                 break;
             case 37://左
-                    if(check(itemPos.x-1,itemPos.y,items[itemIdx1][itemIdx2])) {
-                        drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "backGround")
-                        itemPos.x -= 1
-                        drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "moving")
-                    }
+                xMove(-1)
                 break;
             case 39://右
-                if(check(itemPos.x+1,itemPos.y,items[itemIdx1][itemIdx2])) {
-                    drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "backGround")
-                    itemPos.x += 1
-                    drawItem(itemPos.x, itemPos.y, items[itemIdx1][itemIdx2], "moving")
-                }
+                xMove(1)
                 break;
         }
     }
 
     function getItem() {
-        itemPos.x=width/2
+        itemPos.x=width/2-2
         itemPos.y=0
         itemIdx1=~~(Math.random()*items.length)
         itemIdx2=~~(Math.random()*items[itemIdx1].length)
         drawItem(itemPos.x,itemPos.y,items[itemIdx1][itemIdx2],"moving")
     }
 
-    var interVal
+    function insertToRankList(name,score) {
+        for(var i=0;i<rankList.length;++i){
+            if(rankList[i][1]<score){
+                rankList.insertBefore([name,score],rankList[i])
+                return
+            }
+        }
+        rankList.push([name,score])
+    }
 
     function GameOver() {
-        alert("GameOver")
+        gameOver=true
         window.clearInterval(interVal)
-    }
-
-    var board=createSquare(0,0)
-    board.style.width=30*width+'px'
-    board.style.height=30*height+'px'
-
-    for(var i=0;i<height;++i){
-        bg[i]=new Array(width)
-        for(var j=0;j<width;++j) {
-            bg[i][j] = createSquare(j, i)
+        if(confirm("GameOver!留下大名?")){
+            var name=prompt("输入姓名:")
+            if(name) {
+                insertToRankList(name, score * 100)
+            }
         }
     }
-    bg[height]=new Array(width)
-    for(var i=0;i<width;++i){
-        bg[height][i]=createSquare(i,height)
-        bg[height][i].className="resting"
-        bg[height][i].style.display="none"
+
+    function initGameBoard() {
+        gameOver=true
+
+        board=createSquare(0,0)
+        board.style.width=30*width+'px'
+        board.style.height=30*height+'px'
+
+        bg=new Array(height+1);//背景
+        for(var i=0;i<height;++i){
+            bg[i]=new Array(width)
+            for(var j=0;j<width;++j) {
+                bg[i][j] = createSquare(j, i)
+            }
+        }
+        //在height行设置一行全为resting状态的 不可见的方块
+        bg[height]=new Array(width)
+        for(var i=0;i<width;++i){
+            bg[height][i]=createSquare(i,height)
+            bg[height][i].className="resting"
+            bg[height][i].style.display="none"
+        }
+        
+        var startGameButton=document.createElement("button")
+        startGameButton.innerText="开始游戏"
+        startGameButton.onclick=function () {
+            startGame()
+            startGameButton.innerText="重新开始"
+        }
+        startGameButton.type="button"
+
+        startGameButton.position="absolute"
+        startGameButton.style.marginLeft="0px"
+        startGameButton.style.marginTop=height*30+"px"
+        document.body.appendChild(startGameButton)
+
+        var viewRankBoardButton=document.createElement("button")
+        viewRankBoardButton.innerText="查看排名"
+        viewRankBoardButton.onclick=function () {
+            var list="Rank : Score\n"
+            for(var i=0;i<rankList.length;++i){
+                list=list+rankList[i][0]+" : "+rankList[i][1]+"\n"
+            }
+            alert(list)
+        }
+        document.body.appendChild(viewRankBoardButton)
+        viewRankBoardButton.position="absolute"
+        viewRankBoardButton.style.marginTop=height*30+"px"
     }
 
-    getItem()
-    interVal=window.setInterval("down()",300)
+    function startGame(){
+        for(var i=0;i<width;++i){
+            bg[0][i].innerText=""
+        }
+        for(var i=0;i<height;++i){
+            for(var j=0;j<width;++j){
+                bg[i][j].className="backGround"
+            }
+        }
+
+        getItem()
+        interVal=window.setInterval("down()",maxIntervalTime)
+        score=0
+        gameOver=false
+    }
+    
+    initGameBoard()
 
 </script>
 
