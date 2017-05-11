@@ -6,8 +6,8 @@
 </head>
 
 <style>
-    .moving {margin: 1px;width: 29px;height: 29px;background: red;color: chartreuse; position: absolute;}
-    .resting {margin: 1px;width: 29px;height: 29px;background: aquamarine;color: aquamarine;position: absolute}
+    .moving {margin: 1px;width: 29px;height: 29px;background: red;color: white;font: 25px/25px "Droid Sans Mono"; position: absolute;}
+    .resting {margin: 1px;width: 29px;height: 29px;background: aquamarine;color: white;font: 25px/25px "Droid Sans Mono";position: absolute}
     .backGround {margin: 1px;width:30px;height:30px;color: white;background: black;font: 25px/25px "Droid Sans Mono";position: absolute}
 </style>
 
@@ -17,13 +17,13 @@
     var width=20,height=26
     var maxIntervalTime=500
     var items=new Array(
-    [0x7400,0x3110,0x1700,0x2230
-        //111
-        //1
-    ],
     [0x1111,0xf00
         // 1111
     ],
+            [0x7400,0x3110,0x1700,0x2230
+                //111
+                //1
+            ],
 
     [0x3600,0x2310
         //011
@@ -53,6 +53,8 @@
     var gameOver
     var board
     var rankList=new Array();
+    var isPause
+    var diffcutlys=3
 
     function createSquare(posX,posY) {//创建一个小方块 左上角在(posX*30px,posY*30px)
         var square=document.createElement("div")
@@ -104,10 +106,10 @@
                 }
             }
         }
+
     }
 
     function clearLine(line) {//删除line行
-        ++score
         for(var i=line;i>1;--i){
             for(var j=0;j<width;++j) {
                 bg[i][j].className=bg[i-1][j].className;
@@ -116,6 +118,7 @@
     }
 
     function checkFull(posY) {//是否某行已满
+        var removeLines=0
         for (var i = posY; i < posY + 4 && i < height; ++i) {
             var j
             for (j = 0; j < width; ++j) {
@@ -125,14 +128,16 @@
             }
             if (j == width) {
                 clearLine(i)
+                ++removeLines
             }
         }
-        if (score <= 40) {
+        score+=removeLines*removeLines
+
             clearInterval(interVal)
             if(gameOver==false) {
-                interVal = window.setInterval("down()", maxIntervalTime - score * 10)
+                interVal = window.setInterval("down()", maxIntervalTime - ~~Math.pow(1.3,Math.sqrt(score)))
             }
-        }
+
         var scoreText=("score:"+score*100)
         for(var i=0;i<scoreText.length;++i){
             bg[0][i].innerText=scoreText[i]
@@ -180,19 +185,32 @@
         if(gameOver){
             return
         }
-        switch (event.keyCode){
-            case 38://上
-                rotate()
-                break;
-            case 40://下
-                down()
-                break;
-            case 37://左
-                xMove(-1)
-                break;
-            case 39://右
-                xMove(1)
-                break;
+        if(event.keyCode==80){//P
+            pause()
+        }
+        else {
+            if(isPause==false) {
+                switch (event.keyCode) {
+                    case 38://上
+                        rotate()
+                        break;
+                    case 40://下
+                        down()
+                        break;
+                    case 37://左
+                        xMove(-1)
+                        break;
+                    case 39://右
+                        xMove(1)
+                        break;
+                    case 79:
+                        score+=10;
+                        break
+                        /*
+            default:
+                document.write(event.keyCode)*/
+                }
+            }
         }
     }
 
@@ -223,6 +241,48 @@
                 insertToRankList(name, score * 100)
             }
         }
+
+        diff[~~(diff.length/2)].onclick()
+    }
+
+    function pause() {
+        if(isPause==false) {
+            window.clearInterval(interVal)
+            isPause=true
+
+            var str = "暂停中"
+            bg[height/2][width/2-1].innerText=str[0]
+            bg[height/2][width/2].innerText=str[1]
+            bg[height/2][width/2+1].innerText=str[2]
+        }
+        else{
+            interVal=window.setInterval("down()",maxIntervalTime-10*score)
+            isPause=false
+
+            bg[height/2][width/2-1].innerText=null
+            bg[height/2][width/2].innerText=null
+            bg[height/2][width/2+1].innerText=null
+        }
+    }
+
+    function createButton(innerTest) {
+        var button=document.createElement("button")
+        button.innerText=innerTest
+        document.body.appendChild(button)
+        button.position="absolute"
+        button.style.marginTop=height*30+"px"
+        return button
+    }
+
+    function selectDiff(idx) {
+        for(var i=0;i<diff.length;++i){
+            if(i==idx){
+                diff[i].style.display="none"
+            }
+            else{
+                diff[i].style.display="inline-block"
+            }
+        }
     }
 
     function initGameBoard() {
@@ -247,21 +307,13 @@
             bg[height][i].style.display="none"
         }
         
-        var startGameButton=document.createElement("button")
-        startGameButton.innerText="开始游戏"
+        var startGameButton=createButton("开始游戏")
         startGameButton.onclick=function () {
             startGame()
             startGameButton.innerText="重新开始"
         }
-        startGameButton.type="button"
 
-        startGameButton.position="absolute"
-        startGameButton.style.marginLeft="0px"
-        startGameButton.style.marginTop=height*30+"px"
-        document.body.appendChild(startGameButton)
-
-        var viewRankBoardButton=document.createElement("button")
-        viewRankBoardButton.innerText="查看排名"
+        var viewRankBoardButton=createButton("查看排名")
         viewRankBoardButton.onclick=function () {
             var list="Rank : Score\n"
             for(var i=0;i<rankList.length;++i){
@@ -269,9 +321,24 @@
             }
             alert(list)
         }
-        document.body.appendChild(viewRankBoardButton)
-        viewRankBoardButton.position="absolute"
-        viewRankBoardButton.style.marginTop=height*30+"px"
+
+        var helpButton=createButton("帮助")
+        helpButton.onclick=function () {
+            alert("键盘控制\n上键:变换形状\n下键加速\n左右键移动\nP键暂停")
+        }
+
+        diff=new Array(diffcutlys)
+        for(var i=0;i<diffcutlys;++i){
+            diff[i]=createButton("难度:"+(i+1))
+            diff[i].maxIntervalTime=500-i*150
+            diff[i].onclick=function () {
+                var idx=diff.indexOf(this)
+                selectDiff(idx)
+                maxIntervalTime=this.maxIntervalTime
+            }
+        }
+
+        diff[~~(diff.length/2)].onclick()
     }
 
     function startGame(){
@@ -290,6 +357,11 @@
         interVal=window.setInterval("down()",maxIntervalTime)
         score=0
         gameOver=false
+        isPause=false;
+
+        for(var i=0;i<diff.length;++i){
+            diff[i].style.display='none'
+        }
     }
     
     initGameBoard()
